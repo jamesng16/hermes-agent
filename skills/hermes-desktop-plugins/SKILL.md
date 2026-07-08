@@ -35,11 +35,12 @@ those are Python and documented separately.
 1. Create `~/.hermes/desktop-plugins/<name>/plugin.js` from
    `templates/plugin.js` (relative to this skill directory). Keep `<name>`
    equal to the plugin `id`.
-2. Tell the user to press ⌘K in the desktop app and run
-   **Reload desktop plugins** (or relaunch the app). The plugin loads and
-   its contributions appear.
-3. To update, rewrite the file and reload again — same id replaces the old
-   registration cleanly.
+2. The desktop app watches that directory: the plugin loads within a few
+   seconds of the file landing, and every later save hot-reloads it in
+   place. No reload step. (Fallback if it doesn't appear: ⌘K →
+   **Reload desktop plugins**.)
+3. If loading fails the app shows a toast naming the error — fix the file
+   and save again.
 
 ## Quick Reference
 
