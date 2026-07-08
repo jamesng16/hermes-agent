@@ -2,18 +2,33 @@
  * Example plugin — the authoring + publishing reference. A folder under
  * `src/plugins/` with a `plugin.tsx` that default-exports a `HermesPlugin` is
  * all it takes; `discoverBundledPlugins()` finds and registers it (no import,
- * no registry edit). Delete this folder and the statusbar item is gone.
+ * no registry edit). Delete this folder and everything below is gone.
  *
  * The ONLY import surface is `@hermes/plugin-sdk` (lint-enforced) — the
- * vscode-module model. This one chip dogfoods the whole authoring kit:
- *  - `render()` contribution — full stateful React in a slot;
+ * vscode-module model. This one plugin dogfoods the whole authoring kit:
+ *  - `render()` contribution — full stateful React in a statusbar slot;
  *  - `ctx.storage` — the count survives reloads (namespaced persistence);
  *  - `host.onEvent('*')` — live gateway stream, counted in the tooltip;
+ *  - PALETTE + KEYBINDS contracts — "Example: Reset click counter" in ⌘K
+ *    and as a rebindable (default-unbound) action in the keybind panel;
  *  - plugin-local `atom` + `useValue` — module state, leaf subscription;
  *  - `haptic` / `host.notify` / `Tip` / `cn` — the design language.
  */
 
-import { atom, cn, haptic, type HermesPlugin, host, Tip, useValue } from '@hermes/plugin-sdk'
+import {
+  atom,
+  cn,
+  haptic,
+  type HermesPlugin,
+  host,
+  type KeybindContribution,
+  KEYBINDS_AREA,
+  PALETTE_AREA,
+  type PaletteContribution,
+  STATUSBAR_AREAS,
+  Tip,
+  useValue
+} from '@hermes/plugin-sdk'
 
 const $clicks = atom(0)
 const $events = atom(0)
@@ -62,14 +77,44 @@ const plugin: HermesPlugin = {
     // Hear the live gateway stream (deltas, lifecycle, tools — everything).
     host.onEvent('*', () => $events.set($events.get() + 1))
 
-    // Provenance (source: 'plugin:example') and the namespaced registry id
-    // (example:counter) are stamped by ctx — authors write plain contributions.
-    ctx.register({
-      id: 'counter',
-      area: 'statusBar.right',
-      order: 100,
-      render: () => <ClickCounter />
-    })
+    const reset = () => {
+      $clicks.set(0)
+      host.notify({ kind: 'info', message: 'Example plugin: counter reset' })
+    }
+
+    // Provenance (source: 'plugin:example') and the namespaced registry ids
+    // (example:counter, …) are stamped by ctx — authors write plain
+    // contributions. The shared `example.reset` ACTION id links the palette
+    // row's hotkey hint to the keybind panel's live binding.
+    ctx.registerMany([
+      {
+        id: 'counter',
+        area: STATUSBAR_AREAS.right,
+        order: 100,
+        render: () => <ClickCounter />
+      },
+      {
+        id: 'reset',
+        area: PALETTE_AREA,
+        data: {
+          id: 'example.reset',
+          action: 'example.reset',
+          label: 'Example: Reset click counter',
+          keywords: ['example', 'plugin', 'counter'],
+          run: reset
+        } satisfies PaletteContribution
+      },
+      {
+        id: 'reset',
+        area: KEYBINDS_AREA,
+        data: {
+          id: 'example.reset',
+          label: 'Example: Reset click counter',
+          defaults: [],
+          run: reset
+        } satisfies KeybindContribution
+      }
+    ])
   }
 }
 
